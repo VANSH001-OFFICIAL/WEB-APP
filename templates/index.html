@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Cash Roll Rewards</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #0b0e1e;
+            --card: rgba(255, 255, 255, 0.04);
+            --accent: #7c4dff;
+            --success: #00ffa3;
+            --danger: #ff4d4d;
+        }
+
+        body {
+            background: var(--bg);
+            background-image: radial-gradient(rgba(255,255,255,0.05) 1px, transparent 0);
+            background-size: 24px 24px;
+            color: white;
+            font-family: 'Inter', sans-serif;
+            margin: 0; padding: 15px;
+            padding-bottom: 80px;
+        }
+
+        .balance-card {
+            background: linear-gradient(145deg, #161b33 0%, #0b0e1e 100%);
+            border: 1px solid rgba(124, 77, 255, 0.2);
+            border-radius: 24px;
+            padding: 25px;
+            text-align: center;
+            margin-bottom: 15px;
+        }
+
+        .amount { font-size: 42px; font-weight: 700; margin: 10px 0; }
+        
+        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+        .box { background: var(--card); border: 1px solid rgba(255,255,255,0.08); padding: 15px; border-radius: 18px; }
+
+        /* Admin Button */
+        #adminPanel {
+            display: none;
+            background: rgba(255, 77, 77, 0.1);
+            border: 1px solid var(--danger);
+            padding: 15px; border-radius: 15px; margin-top: 15px;
+        }
+
+        .nav {
+            position: fixed; bottom: 0; left: 0; right: 0;
+            background: rgba(11, 14, 30, 0.9);
+            backdrop-filter: blur(10px);
+            display: flex; justify-content: space-around;
+            padding: 15px; border-top: 1px solid rgba(255,255,255,0.1);
+        }
+        
+        button {
+            background: var(--accent); color: white; border: none;
+            padding: 10px 20px; border-radius: 10px; cursor: pointer;
+            width: 100%; margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="balance-card">
+        <div style="font-size: 12px; opacity: 0.6;">TOTAL BALANCE</div>
+        <div class="amount">₹<span id="bal">21.00</span></div>
+        <div style="font-size: 12px; opacity: 0.4;">Total earned: ₹108.00</div>
+    </div>
+
+    <div class="grid">
+        <div class="box">
+            <div style="color: var(--accent);">👥</div>
+            <div style="font-size: 20px; font-weight: 700;">36</div>
+            <div style="font-size: 10px; opacity: 0.5;">TOTAL REFERS</div>
+        </div>
+        <div class="box">
+            <div style="color: var(--success);">₹</div>
+            <div style="font-size: 20px; font-weight: 700;">₹10</div>
+            <div style="font-size: 10px; opacity: 0.5;">PER REFER</div>
+        </div>
+    </div>
+
+    <div id="adminPanel">
+        <h3 style="margin: 0 0 10px 0;">Admin Controls ⚙️</h3>
+        <button onclick="doAdmin('toggle_withdraw')" style="background: orange;">Toggle Withdraw ON/OFF</button>
+        <button onclick="promptBan('ban_user')" style="background: var(--danger);">Ban User ID</button>
+        <button onclick="promptBan('ban_number')" style="background: var(--danger);">Ban Phone Number</button>
+    </div>
+
+    <div class="nav">
+        <div>Home</div>
+        <div>Refer</div>
+        <div onclick="requestWithdraw()">Withdraw</div>
+        <div>History</div>
+    </div>
+
+    <script>
+        const tg = window.Telegram.WebApp;
+        tg.ready();
+        const user = tg.initDataUnsafe?.user;
+
+        // Show Admin Panel only for you
+        if(user?.id === 7117775366) {
+            document.getElementById('adminPanel').style.display = 'block';
+        }
+
+        async function doAdmin(action, target = null) {
+            const res = await fetch('/api/admin/action', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ admin_id: user.id, action, target })
+            });
+            const data = await res.json();
+            alert(data.message || "Status Changed!");
+        }
+
+        function promptBan(type) {
+            const val = prompt(`Enter ${type === 'ban_user' ? 'User ID' : 'Phone Number'} to ban:`);
+            if(val) doAdmin(type, val);
+        }
+
+        async function requestWithdraw() {
+            const num = prompt("Enter Payment Number:");
+            if(!num) return;
+            
+            tg.MainButton.setText("Processing...").show();
+            const res = await fetch('/api/withdraw', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ user_id: user.id, number: num, amount: 20 })
+            });
+            const data = await res.json();
+            tg.MainButton.hide();
+            alert(data.message || "Withdraw Request Sent!");
+        }
+    </script>
+</body>
+</html>
